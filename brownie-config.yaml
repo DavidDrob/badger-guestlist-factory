@@ -1,0 +1,9 @@
+dependencies:
+  - OpenZeppelin/openzeppelin-contracts-upgradeable@3.4.0
+  - OpenZeppelin/openzeppelin-contracts@3.4.0
+compiler:
+  solc:
+    remappings:
+      - "@openzeppelinupgradeabel=OpenZeppelin/openzeppelin-contracts-upgradeable@3.4.0"
+      - "@openzeppelin=OpenZeppelin/openzeppelin-contracts@3.4.0"
+dotenv: .env
