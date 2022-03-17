@@ -4,6 +4,8 @@ import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./TestVipCappedGuestListBbtcUpgradeable.sol";
 import "../interfaces/uniswap/IUniswapV2Router02.sol";
 import "../interfaces/curve/ICurveSwap.sol";
+import "../interfaces/curve/ICurveRegistry.sol";
+import "../interfaces/curve/ICurveStableSwap.sol";
 
 contract Factory {
     address immutable guestlistImplementation;
@@ -35,6 +37,8 @@ contract Factory {
         return clone;
     }
 
+    // TODO: Add more price oracles
+
     function getUniQuote(
         address tokenIn,
         address tokenOut,
@@ -65,18 +69,36 @@ contract Factory {
                 .getAmountsOut(amountIn, path);
     }
 
+    // Works for most tokens
+    // TODO: Return `_amount` in correct decimals
     function getCurveQuote(
         address _from,
         address _to,
         uint256 _amount
-    ) external view returns (address, uint256) {
+    ) external view returns (uint256) {
         return
-            ICurveSwap(0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2)
-                .get_best_rate(_from, _to, _amount);
-        // Always returns ("0x0000000000000000000000000000000000000000", 0)
-        // TODO: try `StableSwap.get_swap_from_synth_amount` and `get_dy`
-        // https://curve.readthedocs.io/exchange-cross-asset-swaps.html?highlight=swap#StableSwap.get_estimated_swap_amount
-        // https://curve.readthedocs.io/factory-pools.html#StableSwap.get_dy
-        // https://curve.readthedocs.io/registry-exchanges.html#Swaps.get_best_rate https://github.com/curvefi/curve-pool-registry/blob/master/contracts/Swaps.vy#L568
+            ICurveStableSwap(0x58A3c68e2D3aAf316239c003779F71aCb870Ee47)
+                .get_estimated_swap_amount(_from, _to, _amount);
     }
+
+    function getCurveLpVirtualPrice(address _token)
+        external
+        view
+        returns (uint256)
+    {
+        return
+            ICurveRegistry(0x90E00ACe148ca3b23Ac1bC8C240C2a7Dd9c2d7f5)
+                .get_virtual_price_from_lp_token(_token);
+    }
+
+    // Only works for stable coins
+    // function getCurveQuote(
+    //     address _from,
+    //     address _to,
+    //     uint256 _amount
+    // ) external view returns (address, uint256) {
+    //     return
+    //         ICurveSwap(0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2)
+    //             .get_best_rate(_from, _to, _amount);
+    // }
 }
