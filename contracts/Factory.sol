@@ -11,7 +11,9 @@ contract Factory {
     address immutable guestlistImplementation;
 
     // TODO: Add constant for interfaces
-    address constant STABLECOIN = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+    address public constant STABLECOIN =
+        0x6B175474E89094C44Da98b954EedeAC495271d0F;
+    uint8 public constant STABLECOIN_DECIMALS = 18;
 
     constructor() public {
         guestlistImplementation = address(
@@ -49,21 +51,9 @@ contract Factory {
         uint256[] memory quotes = new uint256[](3);
         uint256 sum;
 
-        uint256 curveQuote = this.getCurveQuote(
-            STABLECOIN,
-            _token,
-            _amount
-        );
-        uint256 uniQuote = this.getUniQuote(
-            STABLECOIN,
-            _token,
-            _amount
-        );
-        uint256 sushiQuote = this.getSushiQuote(
-            STABLECOIN,
-            _token,
-            _amount
-        );
+        uint256 curveQuote = this.getCurveQuote(STABLECOIN, _token, _amount);
+        uint256 uniQuote = this.getUniQuote(STABLECOIN, _token, _amount);
+        uint256 sushiQuote = this.getSushiQuote(STABLECOIN, _token, _amount);
 
         if (curveQuote > 0) {
             quotes[0] = curveQuote;
