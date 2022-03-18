@@ -10,6 +10,9 @@ import "../interfaces/curve/ICurveStableSwap.sol";
 contract Factory {
     address immutable guestlistImplementation;
 
+    // TODO: Add constant for interfaces
+    address constant STABLECOIN = 0xdAC17F958D2ee523a2206206994597C13D831ec7;
+
     constructor() public {
         guestlistImplementation = address(
             new TestVipCappedGuestListBbtcUpgradeable()
@@ -47,17 +50,17 @@ contract Factory {
         uint256 sum;
 
         uint256 curveQuote = this.getCurveQuote(
-            0xdAC17F958D2ee523a2206206994597C13D831ec7,
+            STABLECOIN,
             _token,
             _amount
         );
         uint256 uniQuote = this.getUniQuote(
-            0xdAC17F958D2ee523a2206206994597C13D831ec7,
+            STABLECOIN,
             _token,
             _amount
         );
         uint256 sushiQuote = this.getSushiQuote(
-            0xdAC17F958D2ee523a2206206994597C13D831ec7,
+            STABLECOIN,
             _token,
             _amount
         );
@@ -88,7 +91,7 @@ contract Factory {
     ) external view returns (uint256 amount) {
         address[] memory path = new address[](3);
         path[0] = address(tokenIn);
-        path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+        path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
         path[2] = address(tokenOut);
 
         return
@@ -103,7 +106,7 @@ contract Factory {
     ) external view returns (uint256 amount) {
         address[] memory path = new address[](3);
         path[0] = address(tokenIn);
-        path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2);
+        path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
         path[2] = address(tokenOut);
 
         return
