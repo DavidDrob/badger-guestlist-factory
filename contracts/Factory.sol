@@ -49,27 +49,41 @@ contract Factory {
         returns (uint256)
     {
         uint256[] memory quotes = new uint256[](3);
+
+        try this.getCurveQuote(STABLECOIN, _token, _amount) returns (
+            uint256 curveAmount
+        ) {
+            if (curveAmount > 0) {
+                quotes[0] = curveAmount;
+            }
+        } catch (bytes memory) {}
+
+        try this.getUniQuote(STABLECOIN, _token, _amount) returns (
+            uint256 uniAmount
+        ) {
+            if (uniAmount > 0) {
+                quotes[1] = uniAmount;
+            }
+        } catch (bytes memory) {}
+
+        try this.getSushiQuote(STABLECOIN, _token, _amount) returns (
+            uint256 sushiAmount
+        ) {
+            if (sushiAmount > 0) {
+                quotes[2] = sushiAmount;
+            }
+        } catch (bytes memory) {}
+
         uint256 sum;
-
-        uint256 curveQuote = this.getCurveQuote(STABLECOIN, _token, _amount);
-        uint256 uniQuote = this.getUniQuote(STABLECOIN, _token, _amount);
-        uint256 sushiQuote = this.getSushiQuote(STABLECOIN, _token, _amount);
-
-        if (curveQuote > 0) {
-            quotes[0] = curveQuote;
-        }
-        if (uniQuote > 0) {
-            quotes[1] = uniQuote;
-        }
-        if (sushiQuote > 0) {
-            quotes[2] = sushiQuote;
-        }
-
+        uint8 validQuotes;
         for (uint256 i = 0; i < quotes.length; i++) {
-            sum = sum + quotes[i];
+            if (quotes[i] > 0) {
+                validQuotes += 1;
+                sum += quotes[i];
+            }
         }
 
-        return sum / quotes.length;
+        return sum / validQuotes;
     }
 
     // TODO: Add more price oracles
