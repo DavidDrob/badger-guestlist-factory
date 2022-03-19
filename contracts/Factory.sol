@@ -2,6 +2,7 @@ pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./TestVipCappedGuestListBbtcUpgradeable.sol";
+import "../interfaces/badger/IVault.sol";
 import "../interfaces/uniswap/IUniswapV2Router02.sol";
 import "../interfaces/curve/ICurveSwap.sol";
 import "../interfaces/curve/ICurveRegistry.sol";
@@ -24,22 +25,35 @@ contract Factory {
     // TODO: Add comments
     function createGuestList(
         address _wrapper,
-        uint256 _cap,
-        uint256 _totalCap,
+        uint256 _capUsd,
+        uint256 _totalCapUsd,
         bytes32 _merkleRoot,
         address _governance
     ) external returns (address) {
         address clone = Clones.clone(guestlistImplementation);
+
+        address want = address(this.getVaultTokenAddress(_wrapper));
+        uint256 userCap = this.getAverageTokenPrice(want, _capUsd);
+        uint256 totalCap = this.getAverageTokenPrice(want, _totalCapUsd);
+
         TestVipCappedGuestListBbtcUpgradeable(clone).initialize(_wrapper);
-        TestVipCappedGuestListBbtcUpgradeable(clone).setUserDepositCap(_cap);
+        TestVipCappedGuestListBbtcUpgradeable(clone).setUserDepositCap(userCap);
         TestVipCappedGuestListBbtcUpgradeable(clone).setTotalDepositCap(
-            _totalCap
+            totalCap
         );
         TestVipCappedGuestListBbtcUpgradeable(clone).setGuestRoot(_merkleRoot);
         TestVipCappedGuestListBbtcUpgradeable(clone).transferOwnership(
             _governance
         );
         return clone;
+    }
+
+    function getVaultTokenAddress(address _vault)
+        external
+        view
+        returns (IERC20Upgradeable)
+    {
+        return IVault(_vault).token();
     }
 
     // TODO: use safemath
