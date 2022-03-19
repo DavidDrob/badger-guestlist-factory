@@ -1,20 +1,33 @@
 pragma solidity 0.6.12;
 
 import "@openzeppelin/contracts/proxy/Clones.sol";
+import "@openzeppelin/contracts/math/SafeMath.sol";
 import "./TestVipCappedGuestListBbtcUpgradeable.sol";
 import "../interfaces/badger/IVault.sol";
-import "../interfaces/uniswap/IUniswapV2Router02.sol";
-import "../interfaces/curve/ICurveSwap.sol";
+import "../interfaces/uniswap/IUniswapV2Router01.sol";
 import "../interfaces/curve/ICurveRegistry.sol";
 import "../interfaces/curve/ICurveStableSwap.sol";
 
 contract Factory {
     address immutable guestlistImplementation;
+    using SafeMath for uint256;
+    using SafeMath for uint8;
 
-    // TODO: Add constant for interfaces
     address public constant STABLECOIN =
         0x6B175474E89094C44Da98b954EedeAC495271d0F;
     uint8 public constant STABLECOIN_DECIMALS = 18;
+
+    IUniswapV2Router01 public constant UNI_ROUTER =
+        IUniswapV2Router01(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
+    IUniswapV2Router01 public constant SUSHI_ROUTER =
+        IUniswapV2Router01(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
+    ICurveRegistry public constant CURVE_REGISTRY =
+        ICurveRegistry(0x90E00ACe148ca3b23Ac1bC8C240C2a7Dd9c2d7f5);
+
+    // address[] public uni_routers = [
+    //     0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D,
+    //     0x58A3c68e2D3aAf316239c003779F71aCb870Ee47
+    // ];
 
     constructor() public {
         guestlistImplementation = address(
@@ -33,6 +46,8 @@ contract Factory {
         address clone = Clones.clone(guestlistImplementation);
 
         address want = address(this.getVaultTokenAddress(_wrapper));
+
+        // TODO: If no price was found return `type(uint256).max`
         uint256 userCap = this.getAverageTokenPrice(want, _capUsd);
         uint256 totalCap = this.getAverageTokenPrice(want, _totalCapUsd);
 
@@ -112,9 +127,19 @@ contract Factory {
         path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
         path[2] = address(tokenOut);
 
-        return
-            IUniswapV2Router02(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D)
-                .getAmountsOut(amountIn, path)[2];
+        // uint256 sum;
+        // uint8 validQuotes;
+        // for (uint256 i = 0; i < uni_routers.length; i++) {
+        //     uint256 amountsOut = IUniswapV2Router01(uni_routers[i])
+        //         .getAmountsOut(amountIn, path)[2];
+        //     if (amountsOut > 0) {
+        //         sum += amountsOut;
+        //         validQuotes += 1;
+        //     }
+        // }
+
+        // return sum / validQuotes;
+        return UNI_ROUTER.getAmountsOut(amountIn, path)[2];
     }
 
     function getSushiQuote(
@@ -127,13 +152,9 @@ contract Factory {
         path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
         path[2] = address(tokenOut);
 
-        return
-            IUniswapV2Router02(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F)
-                .getAmountsOut(amountIn, path)[2];
+        return SUSHI_ROUTER.getAmountsOut(amountIn, path)[2];
     }
 
-    // Works for most tokens
-    // TODO: Return `_amount` in correct decimals
     function getCurveQuote(
         address _from,
         address _to,
@@ -149,19 +170,6 @@ contract Factory {
         view
         returns (uint256)
     {
-        return
-            ICurveRegistry(0x90E00ACe148ca3b23Ac1bC8C240C2a7Dd9c2d7f5)
-                .get_virtual_price_from_lp_token(_token);
+        return CURVE_REGISTRY.get_virtual_price_from_lp_token(_token);
     }
-
-    // Only works for stable coins
-    // function getCurveQuote(
-    //     address _from,
-    //     address _to,
-    //     uint256 _amount
-    // ) external view returns (address, uint256) {
-    //     return
-    //         ICurveSwap(0xD1602F68CC7C4c7B59D686243EA35a9C73B0c6a2)
-    //             .get_best_rate(_from, _to, _amount);
-    // }
 }
