@@ -1,8 +1,7 @@
 from brownie import accounts
 from scripts.deploy import deploy_factory, deploy_guest_list
-from setup.config import (
-    WRAPPER,
-)
+from scripts.get_token_price_covalent import get_token_price_covalent
+from setup.config import WRAPPER, USER_DEPOSIT_CAP, TOTAL_DEPOSIT_CAP
 
 
 def test_can_create_new_guest_list():
@@ -25,3 +24,25 @@ def test_dev_is_owner():
     guest_list_contract = deploy_guest_list(factory_contract, dev)
 
     assert dev.address == guest_list_contract.owner()
+
+
+def test_deposit_caps_are_correct():
+    dev = accounts[0]
+
+    factory_contract = deploy_factory(dev)
+    guest_list_contract = deploy_guest_list(factory_contract, dev)
+
+    token = factory_contract.getVaultTokenAddress(WRAPPER)
+    token_price = get_token_price_covalent(token)
+
+    assert (
+        int((USER_DEPOSIT_CAP / (10**18) / token_price) * 1.2)
+        >= int(guest_list_contract.userDepositCap() / (10**18))
+        >= int((USER_DEPOSIT_CAP / (10**18) / token_price) * 0.8)
+    )
+
+    assert (
+        int((TOTAL_DEPOSIT_CAP / (10**18) / token_price) * 1.2)
+        >= int(guest_list_contract.totalDepositCap() / (10**18))
+        >= int((TOTAL_DEPOSIT_CAP / (10**18) / token_price) * 0.8)
+    )

@@ -1,8 +1,9 @@
 # Vault address
+# Currently has to be vault that doesn't have a LP Token as its underlying token
 WRAPPER = "0x2B5455aac8d64C14786c3a29858E43b5945819C0"
 
-USER_DEPOSIT_CAP = 2e18
-TOTAL_DEPOSIT_CAP = 2e50
+USER_DEPOSIT_CAP = 200e18
+TOTAL_DEPOSIT_CAP = 2000e18
 
 # Root of merkle tree
 GUEST_ROOT = "0x1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a"
