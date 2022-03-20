@@ -1,6 +1,6 @@
 # Vault address
 # Currently has to be vault that doesn't have a LP Token as its underlying token
-WRAPPER = "0x2B5455aac8d64C14786c3a29858E43b5945819C0"
+WRAPPER = "0x758A43EE2BFf8230eeb784879CdcFF4828F2544D"
 
 USER_DEPOSIT_CAP = 200e18
 TOTAL_DEPOSIT_CAP = 2000e18

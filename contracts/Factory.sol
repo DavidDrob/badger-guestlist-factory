@@ -7,6 +7,7 @@ import "../interfaces/badger/IVault.sol";
 import "../interfaces/uniswap/IUniswapV2Router01.sol";
 import "../interfaces/curve/ICurveRegistry.sol";
 import "../interfaces/curve/ICurveStableSwap.sol";
+import "../interfaces/uniswap/IUniswapV2Pair.sol";
 
 contract Factory {
     address immutable guestlistImplementation;
@@ -112,6 +113,8 @@ contract Factory {
             }
         }
 
+        // If 0 valid quotes -> call the `getLPQuote` function
+
         return sum / validQuotes;
     }
 
@@ -165,11 +168,40 @@ contract Factory {
                 .get_estimated_swap_amount(_from, _to, _amount);
     }
 
-    function getCurveLpVirtualPrice(address _token)
-        external
-        view
-        returns (uint256)
-    {
-        return CURVE_REGISTRY.get_virtual_price_from_lp_token(_token);
+    // Testing 0xCEfF51756c56CeFFCA006cD410B03FFC46dd3a58
+    // TODO: p should be in USD | Swap amount out with amount in
+    function getLPQuote(address pair) external view returns (uint256) {
+        address token0 = IUniswapV2Pair(pair).token0();
+        address token1 = IUniswapV2Pair(pair).token1();
+        uint256 totalSupply = IUniswapV2Pair(pair).totalSupply();
+        (uint256 r0, uint256 r1, ) = IUniswapV2Pair(pair).getReserves();
+
+        // uint256 p0 = this.getAverageTokenPrice(token0, 41153000000000001835008);
+        // uint256 p1 = this.getAverageTokenPrice(token1, 2836000000000000000000);
+        uint256 p0 = 41153000000000001835008; // USD
+        uint256 p1 = 2836000000000000000000; // USD
+
+        // TODO: Test trycrypto pools
+        // Multiply by 3 for tricrypto pools (?)
+
+        // naive option
+        uint256 lpPrice = 2 * (((r0 * p0) + (r1 * p1)) / totalSupply);
+
+        // TODO: alpha finance option
+
+        return lpPrice;
+    }
+
+    function sqrt(uint256 y) internal pure returns (uint256 z) {
+        if (y > 3) {
+            z = y;
+            uint256 x = y / 2 + 1;
+            while (x < z) {
+                z = x;
+                x = (y / x + x) / 2;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
     }
 }
