@@ -126,10 +126,19 @@ contract Factory {
         address tokenOut,
         uint256 amountIn
     ) external view returns (uint256 amount) {
-        address[] memory path = new address[](3);
-        path[0] = address(tokenIn);
-        path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
-        path[2] = address(tokenOut);
+        if (address(tokenIn) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 || address(tokenOut) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
+            address[] memory path = new address[](2);
+            path[0] = address(tokenIn);
+            path[1] = address(tokenOut);
+            return UNI_ROUTER.getAmountsOut(amountIn, path)[1];
+        }
+        else {
+            address[] memory path = new address[](3);
+            path[0] = address(tokenIn);
+            path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
+            path[2] = address(tokenOut);
+            return UNI_ROUTER.getAmountsOut(amountIn, path)[2];
+        }
 
         // uint256 sum;
         // uint8 validQuotes;
@@ -143,7 +152,6 @@ contract Factory {
         // }
 
         // return sum / validQuotes;
-        return UNI_ROUTER.getAmountsOut(amountIn, path)[2];
     }
 
     function getSushiQuote(
@@ -151,12 +159,22 @@ contract Factory {
         address tokenOut,
         uint256 amountIn
     ) external view returns (uint256 amount) {
-        address[] memory path = new address[](3);
-        path[0] = address(tokenIn);
-        path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
-        path[2] = address(tokenOut);
+        if (address(tokenIn) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 || address(tokenOut) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
+            address[] memory path = new address[](2);
+            path[0] = address(tokenIn);
+            path[1] = address(tokenOut);
+            return SUSHI_ROUTER.getAmountsOut(amountIn, path)[1];
+        }
+        else {
+            address[] memory path = new address[](3);
+            path[0] = address(tokenIn);
+            path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
+            path[2] = address(tokenOut);
 
-        return SUSHI_ROUTER.getAmountsOut(amountIn, path)[2];
+            return SUSHI_ROUTER.getAmountsOut(amountIn, path)[2];
+        }
+
+
     }
 
     function getCurveQuote(
