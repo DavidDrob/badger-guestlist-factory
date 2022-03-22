@@ -8,6 +8,7 @@ import "../interfaces/uniswap/IUniswapV2Router01.sol";
 import "../interfaces/curve/ICurveRegistry.sol";
 import "../interfaces/curve/ICurveStableSwap.sol";
 import "../interfaces/uniswap/IUniswapV2Pair.sol";
+import "../interfaces/erc20/IERC20.sol";
 
 contract Factory {
     address immutable guestlistImplementation;
@@ -49,8 +50,8 @@ contract Factory {
         address want = address(this.getVaultTokenAddress(_wrapper));
 
         // TODO: If no price was found return `type(uint256).max`
-        uint256 userCap = this.getAverageTokenPrice(want, _capUsd);
-        uint256 totalCap = this.getAverageTokenPrice(want, _totalCapUsd);
+        uint256 userCap = this.getAverageTokenPrice(STABLECOIN, want, _capUsd);
+        uint256 totalCap = this.getAverageTokenPrice(STABLECOIN, want, _totalCapUsd);
 
         TestVipCappedGuestListBbtcUpgradeable(clone).initialize(_wrapper);
         TestVipCappedGuestListBbtcUpgradeable(clone).setUserDepositCap(userCap);
@@ -72,15 +73,15 @@ contract Factory {
         return IVault(_vault).token();
     }
 
-    // TODO: use safemath
-    function getAverageTokenPrice(address _token, uint256 _amount)
+    function getAverageTokenPrice(address _from, address _to, uint256 _amount)
         external
         view
         returns (uint256)
     {
         uint256[] memory quotes = new uint256[](3);
+        uint256 amount = _amount * (10 ** IERC20(_from).decimals());
 
-        try this.getCurveQuote(STABLECOIN, _token, _amount) returns (
+        try this.getCurveQuote(_from, _to, amount) returns (
             uint256 curveAmount
         ) {
             if (curveAmount > 0) {
@@ -88,7 +89,7 @@ contract Factory {
             }
         } catch (bytes memory) {}
 
-        try this.getUniQuote(STABLECOIN, _token, _amount) returns (
+        try this.getUniQuote(_from, _to, amount) returns (
             uint256 uniAmount
         ) {
             if (uniAmount > 0) {
@@ -96,7 +97,7 @@ contract Factory {
             }
         } catch (bytes memory) {}
 
-        try this.getSushiQuote(STABLECOIN, _token, _amount) returns (
+        try this.getSushiQuote(_from, _to, amount) returns (
             uint256 sushiAmount
         ) {
             if (sushiAmount > 0) {
@@ -168,18 +169,14 @@ contract Factory {
                 .get_estimated_swap_amount(_from, _to, _amount);
     }
 
-    // Testing 0xCEfF51756c56CeFFCA006cD410B03FFC46dd3a58
-    // TODO: p should be in USD | Swap amount out with amount in
     function getLPQuote(address pair) external view returns (uint256) {
         address token0 = IUniswapV2Pair(pair).token0();
         address token1 = IUniswapV2Pair(pair).token1();
         uint256 totalSupply = IUniswapV2Pair(pair).totalSupply();
         (uint256 r0, uint256 r1, ) = IUniswapV2Pair(pair).getReserves();
 
-        // uint256 p0 = this.getAverageTokenPrice(token0, 41153000000000001835008);
-        // uint256 p1 = this.getAverageTokenPrice(token1, 2836000000000000000000);
-        uint256 p0 = 41153000000000001835008; // USD
-        uint256 p1 = 2836000000000000000000; // USD
+        uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
+        uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
 
         // TODO: Test trycrypto pools
         // Multiply by 3 for tricrypto pools (?)
