@@ -53,6 +53,14 @@ contract Factory {
         uint256 userCap = this.getAverageTokenPrice(STABLECOIN, want, _capUsd);
         uint256 totalCap = this.getAverageTokenPrice(STABLECOIN, want, _totalCapUsd);
 
+        // If no price was found if it's probably a LP Token
+        if (userCap == 0 || totalCap == 0) {
+            userCap = (_capUsd * (10 ** IERC20(STABLECOIN).decimals())) / this.getLPQuote(want);
+            totalCap = (_totalCapUsd * (10 ** IERC20(STABLECOIN).decimals())) / this.getLPQuote(want);
+        }
+
+        // If it's still 0, return unlimited threshold (?)
+
         TestVipCappedGuestListBbtcUpgradeable(clone).initialize(_wrapper);
         TestVipCappedGuestListBbtcUpgradeable(clone).setUserDepositCap(userCap);
         TestVipCappedGuestListBbtcUpgradeable(clone).setTotalDepositCap(
@@ -114,7 +122,11 @@ contract Factory {
             }
         }
 
-        // If 0 valid quotes -> call the `getLPQuote` function
+        // TODO: Find a better way of checking if the token is an LP token
+        // See tests on 0xCEfF51756c56CeFFCA006cD410B03FFC46dd3a58 as wrapper 
+        if (validQuotes == 0) {
+            return 0;
+        }
 
         return sum / validQuotes;
     }
