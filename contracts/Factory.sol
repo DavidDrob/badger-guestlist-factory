@@ -51,12 +51,20 @@ contract Factory {
 
         // TODO: If no price was found return `type(uint256).max`
         uint256 userCap = this.getAverageTokenPrice(STABLECOIN, want, _capUsd);
-        uint256 totalCap = this.getAverageTokenPrice(STABLECOIN, want, _totalCapUsd);
+        uint256 totalCap = this.getAverageTokenPrice(
+            STABLECOIN,
+            want,
+            _totalCapUsd
+        );
 
         // If no price was found if it's probably a LP Token
         if (userCap == 0 || totalCap == 0) {
-            userCap = (_capUsd * (10 ** IERC20(STABLECOIN).decimals())) / this.getLPQuote(want);
-            totalCap = (_totalCapUsd * (10 ** IERC20(STABLECOIN).decimals())) / this.getLPQuote(want);
+            userCap =
+                (_capUsd * (10**IERC20(STABLECOIN).decimals())) /
+                this.getLPQuote(want);
+            totalCap =
+                (_totalCapUsd * (10**IERC20(STABLECOIN).decimals())) /
+                this.getLPQuote(want);
         }
 
         // If it's still 0, return unlimited threshold (?)
@@ -81,13 +89,13 @@ contract Factory {
         return IVault(_vault).token();
     }
 
-    function getAverageTokenPrice(address _from, address _to, uint256 _amount)
-        external
-        view
-        returns (uint256)
-    {
+    function getAverageTokenPrice(
+        address _from,
+        address _to,
+        uint256 _amount
+    ) external view returns (uint256) {
         uint256[] memory quotes = new uint256[](3);
-        uint256 amount = _amount * (10 ** IERC20(_from).decimals());
+        uint256 amount = _amount * (10**IERC20(_from).decimals());
 
         try this.getCurveQuote(_from, _to, amount) returns (
             uint256 curveAmount
@@ -97,9 +105,7 @@ contract Factory {
             }
         } catch (bytes memory) {}
 
-        try this.getUniQuote(_from, _to, amount) returns (
-            uint256 uniAmount
-        ) {
+        try this.getUniQuote(_from, _to, amount) returns (uint256 uniAmount) {
             if (uniAmount > 0) {
                 quotes[1] = uniAmount;
             }
@@ -123,7 +129,7 @@ contract Factory {
         }
 
         // TODO: Find a better way of checking if the token is an LP token
-        // See tests on 0xCEfF51756c56CeFFCA006cD410B03FFC46dd3a58 as wrapper 
+        // See tests on 0x758A43EE2BFf8230eeb784879CdcFF4828F2544D as wrapper
         if (validQuotes == 0) {
             return 0;
         }
@@ -138,13 +144,15 @@ contract Factory {
         address tokenOut,
         uint256 amountIn
     ) external view returns (uint256 amount) {
-        if (address(tokenIn) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 || address(tokenOut) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
+        if (
+            address(tokenIn) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 ||
+            address(tokenOut) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+        ) {
             address[] memory path = new address[](2);
             path[0] = address(tokenIn);
             path[1] = address(tokenOut);
             return UNI_ROUTER.getAmountsOut(amountIn, path)[1];
-        }
-        else {
+        } else {
             address[] memory path = new address[](3);
             path[0] = address(tokenIn);
             path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
@@ -171,13 +179,15 @@ contract Factory {
         address tokenOut,
         uint256 amountIn
     ) external view returns (uint256 amount) {
-        if (address(tokenIn) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 || address(tokenOut) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2) {
+        if (
+            address(tokenIn) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 ||
+            address(tokenOut) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
+        ) {
             address[] memory path = new address[](2);
             path[0] = address(tokenIn);
             path[1] = address(tokenOut);
             return SUSHI_ROUTER.getAmountsOut(amountIn, path)[1];
-        }
-        else {
+        } else {
             address[] memory path = new address[](3);
             path[0] = address(tokenIn);
             path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
@@ -185,8 +195,6 @@ contract Factory {
 
             return SUSHI_ROUTER.getAmountsOut(amountIn, path)[2];
         }
-
-
     }
 
     function getCurveQuote(
@@ -208,16 +216,63 @@ contract Factory {
         uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
         uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
 
-        // TODO: Test trycrypto pools
-        // Multiply by 3 for tricrypto pools (?)
-
-        // naive option
+        // naive way
         uint256 lpPrice = 2 * (((r0 * p0) + (r1 * p1)) / totalSupply);
 
-        // TODO: alpha finance option
+        // TODO: alpha finance way
 
         return lpPrice;
     }
+
+    function getLPQuoteCurve(address lp)
+        external
+        view
+        returns (address[] memory)
+    {
+        // ICurveRegistry registry = ICurveRegistry(
+        //     0x8F942C20D02bEfc377D41445793068908E2250D0
+        // );
+        address pool = this.getCurvePoolFromLp(lp);
+        address[] memory test = this.getCurvePoolCoins(pool);
+
+        return test;
+        // uint256 p1 = this.getAverageTokenPrice(c1, STABLECOIN, 1);
+        // uint256 p2 = this.getAverageTokenPrice(c2, STABLECOIN, 1);
+        // uint256 p3 = this.getAverageTokenPrice(c3, STABLECOIN, 1);
+        // uint256 v_lp = registry.get_virtual_price_from_lp_token(lp);
+
+        // return p1;
+    }
+
+    function getCurvePoolFromLp(address _lp) external view returns (address) {
+        return
+            ICurveRegistry(0x8F942C20D02bEfc377D41445793068908E2250D0)
+                .get_pool_from_lp_token(_lp);
+    }
+
+    // function getCurveLpVirtualPrice(address _token)
+    //     external
+    //     view
+    //     returns (uint256)
+    // {
+    //     return
+    //         ICurveRegistry(0x8F942C20D02bEfc377D41445793068908E2250D0)
+    //             .get_virtual_price_from_lp_token(_token);
+    // }
+
+    // https://etherscan.io/address/0x8F942C20D02bEfc377D41445793068908E2250D0#readContract
+    function getCurvePoolCoins(address _pool)
+        external
+        view
+        returns (address[] memory)
+    {
+        return
+            ICurveRegistry(0x8F942C20D02bEfc377D41445793068908E2250D0)
+                .get_coins(_pool);
+    }
+
+    // cubic root
+    // https://etherscan.io/address/0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950#readContract
 
     function sqrt(uint256 y) internal pure returns (uint256 z) {
         if (y > 3) {
