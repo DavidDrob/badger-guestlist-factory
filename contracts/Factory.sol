@@ -7,6 +7,7 @@ import "../interfaces/badger/IVault.sol";
 import "../interfaces/uniswap/IUniswapV2Router01.sol";
 import "../interfaces/curve/ICurveRegistry.sol";
 import "../interfaces/curve/ICurveStableSwap.sol";
+import "../interfaces/curve/ICurveTriCrypto.sol";
 import "../interfaces/uniswap/IUniswapV2Pair.sol";
 import "../interfaces/erc20/IERC20.sol";
 
@@ -224,24 +225,22 @@ contract Factory {
         return lpPrice;
     }
 
-    function getLPQuoteCurve(address lp)
-        external
-        view
-        returns (address[] memory)
-    {
-        // ICurveRegistry registry = ICurveRegistry(
-        //     0x8F942C20D02bEfc377D41445793068908E2250D0
-        // );
-        address pool = this.getCurvePoolFromLp(lp);
-        address[] memory test = this.getCurvePoolCoins(pool);
+    function getCurveTriCryptoLPQuote(address pool) external view returns (uint256, uint256) {
+        ICurveTriCrypto poolContract = ICurveTriCrypto(pool);
 
-        return test;
-        // uint256 p1 = this.getAverageTokenPrice(c1, STABLECOIN, 1);
-        // uint256 p2 = this.getAverageTokenPrice(c2, STABLECOIN, 1);
-        // uint256 p3 = this.getAverageTokenPrice(c3, STABLECOIN, 1);
-        // uint256 v_lp = registry.get_virtual_price_from_lp_token(lp);
+        address token0 = poolContract.coins(0);
+        address token1 = poolContract.coins(1);
+        address token2 = poolContract.coins(2);
 
-        // return p1;
+        uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
+        uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
+        uint256 p2 = this.getAverageTokenPrice(token2, STABLECOIN, 1);
+        uint256 v_lp = poolContract.get_virtual_price();
+
+        uint256 price = this.cubicRoot(p0*p1*p2);
+        uint256 testFinal = (price * v_lp * 3) / (10 ** 18);
+
+        return (price, testFinal);
     }
 
     function getCurvePoolFromLp(address _lp) external view returns (address) {
@@ -250,31 +249,22 @@ contract Factory {
                 .get_pool_from_lp_token(_lp);
     }
 
-    // function getCurveLpVirtualPrice(address _token)
-    //     external
-    //     view
-    //     returns (uint256)
-    // {
-    //     return
-    //         ICurveRegistry(0x8F942C20D02bEfc377D41445793068908E2250D0)
-    //             .get_virtual_price_from_lp_token(_token);
-    // }
-
-    // https://etherscan.io/address/0x8F942C20D02bEfc377D41445793068908E2250D0#readContract
-    function getCurvePoolCoins(address _pool)
-        external
-        view
-        returns (address[] memory)
-    {
-        return
-            ICurveRegistry(0x8F942C20D02bEfc377D41445793068908E2250D0)
-                .get_coins(_pool);
-    }
-
     // cubic root
     // https://etherscan.io/address/0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950#readContract
+    function cubicRoot(uint y) external pure returns (uint z) {
+        if (y > 7) {
+            z = y;
+            uint x = y / 3 + 1;
+            while (x < z) {
+                z = x;
+                x = (y / (x * x) + (2 * x)) / 3;
+            }
+        } else if (y != 0) {
+            z = 1;
+        }
+    }
 
-    function sqrt(uint256 y) internal pure returns (uint256 z) {
+    function _sqrt(uint256 y) internal pure returns (uint256 z) {
         if (y > 3) {
             z = y;
             uint256 x = y / 2 + 1;

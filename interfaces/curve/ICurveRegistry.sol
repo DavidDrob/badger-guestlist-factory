@@ -11,14 +11,14 @@ interface ICurveRegistry {
     function get_rates(address _pool)
         external
         view
-        returns (uint256[] calldata);
+        returns (uint256[] memory);
 
     function get_underlying_coins(address _pool)
         external
         view
-        returns (address[] calldata);
+        returns (address[] memory);
 
-    function get_coins(address _pool) external view returns (address[] memory);
+    function get_coins(address _pool) external view returns (address[] memory MAX_COINS);
 
     function get_pool_from_lp_token(address _lp)
         external
