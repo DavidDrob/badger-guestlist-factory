@@ -4,6 +4,7 @@ from scripts.get_token_price_covalent import get_token_price_covalent
 from setup.config import WRAPPER, USER_DEPOSIT_CAP, TOTAL_DEPOSIT_CAP
 import pytest
 
+
 def test_can_create_new_guest_list():
     expected_wrapper = WRAPPER
     dev = accounts[0]

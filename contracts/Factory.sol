@@ -48,27 +48,9 @@ contract Factory {
     ) external returns (address) {
         address clone = Clones.clone(guestlistImplementation);
 
-        address want = address(this.getVaultTokenAddress(_wrapper));
-
-        // TODO: If no price was found return `type(uint256).max`
-        uint256 userCap = this.getAverageTokenPrice(STABLECOIN, want, _capUsd);
-        uint256 totalCap = this.getAverageTokenPrice(
-            STABLECOIN,
-            want,
-            _totalCapUsd
-        );
-
-        // If no price was found if it's probably a LP Token
-        if (userCap == 0 || totalCap == 0) {
-            userCap =
-                (_capUsd * (10**IERC20(STABLECOIN).decimals())) /
-                this.getLPQuote(want);
-            totalCap =
-                (_totalCapUsd * (10**IERC20(STABLECOIN).decimals())) /
-                this.getLPQuote(want);
-        }
-
-        // If it's still 0, return unlimited threshold (?)
+        // TODO: If no price was found return `type(uint256).max` (??)
+        uint256 userCap = this.getCap(_capUsd, _wrapper);
+        uint256 totalCap = this.getCap(_totalCapUsd, _wrapper);
 
         TestVipCappedGuestListBbtcUpgradeable(clone).initialize(_wrapper);
         TestVipCappedGuestListBbtcUpgradeable(clone).setUserDepositCap(userCap);
@@ -80,6 +62,27 @@ contract Factory {
             _governance
         );
         return clone;
+    }
+
+    function getCap(uint256 _capUsd, address _wrapper)
+        external
+        view
+        returns (uint256)
+    {
+        address want = address(this.getVaultTokenAddress(_wrapper));
+        uint256 cap;
+
+        try this.getLPQuote(want) returns (uint256 value) {
+            if (value > 0) {
+                cap = (
+                    (_capUsd * (10**IERC20(STABLECOIN).decimals()) * (10**18))
+                ).div(this.getLPQuote(want));
+            }
+        } catch (bytes memory) {
+            cap = this.getAverageTokenPrice(STABLECOIN, want, _capUsd);
+        }
+
+        return cap;
     }
 
     function getVaultTokenAddress(address _vault)
@@ -129,8 +132,6 @@ contract Factory {
             }
         }
 
-        // TODO: Find a better way of checking if the token is an LP token
-        // See tests on 0x758A43EE2BFf8230eeb784879CdcFF4828F2544D as wrapper
         if (validQuotes == 0) {
             return 0;
         }
@@ -218,14 +219,20 @@ contract Factory {
         uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
 
         // naive way
-        uint256 lpPrice = 2 * (((r0 * p0) + (r1 * p1)) / totalSupply);
+        uint256 lpPriceNaive = 2 * (((r0 * p0) + (r1 * p1)) / totalSupply);
 
         // TODO: alpha finance way
+        // uint256 k = (this.sqrt(r0 * r1)) / totalSupply;
+        // uint256 lpPriceAlpha = 2 * k * this.sqrt(p0 * p1);
 
-        return lpPrice;
+        return lpPriceNaive;
     }
 
-    function getCurveTriCryptoLPQuote(address pool) external view returns (uint256, uint256) {
+    function getCurveTriCryptoLPQuote(address pool)
+        external
+        view
+        returns (uint256, uint256)
+    {
         ICurveTriCrypto poolContract = ICurveTriCrypto(pool);
 
         address token0 = poolContract.coins(0);
@@ -237,8 +244,8 @@ contract Factory {
         uint256 p2 = this.getAverageTokenPrice(token2, STABLECOIN, 1);
         uint256 v_lp = poolContract.get_virtual_price();
 
-        uint256 price = this.cubicRoot(p0*p1*p2);
-        uint256 testFinal = (price * v_lp * 3) / (10 ** 18);
+        uint256 price = this.cubicRoot(p0 * p1 * p2);
+        uint256 testFinal = (price * v_lp * 3) / (10**18);
 
         return (price, testFinal);
     }
@@ -251,10 +258,10 @@ contract Factory {
 
     // cubic root
     // https://etherscan.io/address/0xE8b2989276E2Ca8FDEA2268E3551b2b4B2418950#readContract
-    function cubicRoot(uint y) external pure returns (uint z) {
+    function cubicRoot(uint256 y) external pure returns (uint256 z) {
         if (y > 7) {
             z = y;
-            uint x = y / 3 + 1;
+            uint256 x = y / 3 + 1;
             while (x < z) {
                 z = x;
                 x = (y / (x * x) + (2 * x)) / 3;
@@ -264,7 +271,7 @@ contract Factory {
         }
     }
 
-    function _sqrt(uint256 y) internal pure returns (uint256 z) {
+    function sqrt(uint256 y) external pure returns (uint256 z) {
         if (y > 3) {
             z = y;
             uint256 x = y / 2 + 1;
