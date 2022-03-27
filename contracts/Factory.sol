@@ -72,6 +72,14 @@ contract Factory {
         address want = address(this.getVaultTokenAddress(_wrapper));
         uint256 cap;
 
+        try this.getCurveTriCryptoLPQuote(want) returns (uint256 value) {
+            if (value > 0) {
+                cap = (_capUsd * (10**IERC20(STABLECOIN).decimals()) * (10**18))
+                    .div(value);
+                return cap;
+            }
+        } catch (bytes memory) {}
+
         try this.getLPQuote(want) returns (uint256 value) {
             if (value > 0) {
                 cap = (
@@ -264,11 +272,19 @@ contract Factory {
         return lpPriceNaive;
     }
 
-    function getCurveTriCryptoLPQuote(address pool)
+    function getCurveTriCryptoLPQuote(address _lp)
         external
         view
         returns (uint256)
     {
+        address pool = ICurveRegistry(
+            0x8F942C20D02bEfc377D41445793068908E2250D0
+        ).get_pool_from_lp_token(_lp);
+
+        if (pool == address(0)) {
+            pool = CURVE_REGISTRY.get_pool_from_lp_token(_lp);
+        }
+
         ICurveTriCrypto poolContract = ICurveTriCrypto(pool);
 
         address token0 = poolContract.coins(0);
