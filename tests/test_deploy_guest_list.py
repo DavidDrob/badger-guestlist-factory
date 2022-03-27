@@ -4,6 +4,8 @@ from scripts.get_token_price_covalent import get_token_price_covalent
 from setup.config import WRAPPER, USER_DEPOSIT_CAP, TOTAL_DEPOSIT_CAP
 import pytest
 
+MAX_NUM = 115792089237316195423570985008687907853269984665640564039457584007913129639935
+
 
 def test_can_create_new_guest_list():
     expected_wrapper = WRAPPER
@@ -34,19 +36,25 @@ def test_deposit_caps_are_correct():
     guest_list_contract = deploy_guest_list(factory_contract, dev)
 
     token = factory_contract.getVaultTokenAddress(WRAPPER)
-    token_price = get_token_price_covalent(token)
+    covalent_token_price, covalent_token_decimals = get_token_price_covalent(token)
 
-    if token_price == 0:
+    if (
+        covalent_token_price == 0
+        or guest_list_contract.userDepositCap() == MAX_NUM
+        or guest_list_contract.totalDepositCap() == MAX_NUM
+    ):
         pytest.skip()
 
     assert (
-        float((USER_DEPOSIT_CAP / token_price) * 1.2)
-        >= float(guest_list_contract.userDepositCap() / (10**18))
-        >= float((USER_DEPOSIT_CAP / token_price) * 0.8)
+        float((USER_DEPOSIT_CAP / covalent_token_price) * 1.3)
+        >= float(guest_list_contract.userDepositCap() / (10**covalent_token_decimals))
+        >= float((USER_DEPOSIT_CAP / covalent_token_price) * 0.7)
     )
 
     assert (
-        float((TOTAL_DEPOSIT_CAP / token_price) * 1.2)
-        >= float(guest_list_contract.totalDepositCap() / (10**18))
-        >= float((TOTAL_DEPOSIT_CAP / token_price) * 0.8)
+        float((TOTAL_DEPOSIT_CAP / covalent_token_price) * 1.3)
+        >= float(
+            guest_list_contract.totalDepositCap() / (10**covalent_token_decimals)
+        )
+        >= float((TOTAL_DEPOSIT_CAP / covalent_token_price) * 0.7)
     )

@@ -14,7 +14,8 @@ def get_token_price_covalent(token):
     parsed = json.loads(response.text)
 
     if (parsed["data"][0]["prices"][0]["price"]) == None:
-        return 0
+        return 0, 0
     covalent_token_price = float((parsed["data"][0]["prices"][0]["price"]))
+    covalent_token_decimals = int((parsed["data"][0]["contract_decimals"]))
 
-    return covalent_token_price
+    return covalent_token_price, covalent_token_decimals

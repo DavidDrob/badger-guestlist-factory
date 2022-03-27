@@ -9,6 +9,7 @@ import "../interfaces/curve/ICurveRegistry.sol";
 import "../interfaces/curve/ICurveStableSwap.sol";
 import "../interfaces/curve/ICurveTriCrypto.sol";
 import "../interfaces/uniswap/IUniswapV2Pair.sol";
+import "../interfaces/uniswap/IUniswapV2Factory.sol";
 import "../interfaces/erc20/IERC20.sol";
 
 contract Factory {
@@ -48,7 +49,6 @@ contract Factory {
     ) external returns (address) {
         address clone = Clones.clone(guestlistImplementation);
 
-        // TODO: If no price was found return `type(uint256).max` (??)
         uint256 userCap = this.getCap(_capUsd, _wrapper);
         uint256 totalCap = this.getCap(_totalCapUsd, _wrapper);
 
@@ -82,6 +82,9 @@ contract Factory {
             cap = this.getAverageTokenPrice(STABLECOIN, want, _capUsd);
         }
 
+        if (cap == 0) {
+            cap = type(uint256).max;
+        }
         return cap;
     }
 
@@ -146,6 +149,8 @@ contract Factory {
         address tokenOut,
         uint256 amountIn
     ) external view returns (uint256 amount) {
+        uint256 amountOut;
+
         if (
             address(tokenIn) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 ||
             address(tokenOut) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
@@ -159,9 +164,23 @@ contract Factory {
             path[0] = address(tokenIn);
             path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
             path[2] = address(tokenOut);
-            return UNI_ROUTER.getAmountsOut(amountIn, path)[2];
+            amountOut = UNI_ROUTER.getAmountsOut(amountIn, path)[2];
         }
 
+        // Check if amountOut is larger then the reserve in pool
+        // Returns 0 if there's too little liquidity in pool
+        address pair = IUniswapV2Factory(
+            0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
+        ).getPair(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, tokenOut);
+        (uint256 r1, , ) = IUniswapV2Pair(pair).getReserves();
+
+        if (
+            (r1 * 1200000000000000000) / (10**18) >= amountOut &&
+            amountOut >= (r1 * 800000000000000000) / (10**18)
+        ) {
+            amountOut = 0;
+        }
+        return amountOut;
         // uint256 sum;
         // uint8 validQuotes;
         // for (uint256 i = 0; i < uni_routers.length; i++) {
@@ -181,6 +200,8 @@ contract Factory {
         address tokenOut,
         uint256 amountIn
     ) external view returns (uint256 amount) {
+        uint256 amountOut;
+
         if (
             address(tokenIn) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 ||
             address(tokenOut) == 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2
@@ -195,8 +216,23 @@ contract Factory {
             path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
             path[2] = address(tokenOut);
 
-            return SUSHI_ROUTER.getAmountsOut(amountIn, path)[2];
+            amountOut = SUSHI_ROUTER.getAmountsOut(amountIn, path)[2];
         }
+
+        // Check if amountOut is larger then the reserve in pool
+        // Returns 0 if there's too little liquidity in pool
+        address pair = IUniswapV2Factory(
+            0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f
+        ).getPair(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2, tokenOut);
+        (uint256 r1, , ) = IUniswapV2Pair(pair).getReserves();
+
+        if (
+            (r1 * 1200000000000000000) / (10**18) >= amountOut &&
+            amountOut >= (r1 * 800000000000000000) / (10**18)
+        ) {
+            amountOut = 0;
+        }
+        return amountOut;
     }
 
     function getCurveQuote(
@@ -231,7 +267,7 @@ contract Factory {
     function getCurveTriCryptoLPQuote(address pool)
         external
         view
-        returns (uint256, uint256)
+        returns (uint256)
     {
         ICurveTriCrypto poolContract = ICurveTriCrypto(pool);
 
@@ -245,15 +281,21 @@ contract Factory {
         uint256 v_lp = poolContract.get_virtual_price();
 
         uint256 price = this.cubicRoot(p0 * p1 * p2);
-        uint256 testFinal = (price * v_lp * 3) / (10**18);
+        uint256 finalPrice = (price * v_lp * 3) / (10**18);
 
-        return (price, testFinal);
+        return finalPrice;
     }
 
     function getCurvePoolFromLp(address _lp) external view returns (address) {
-        return
-            ICurveRegistry(0x8F942C20D02bEfc377D41445793068908E2250D0)
+        address pool = ICurveRegistry(
+            0x8F942C20D02bEfc377D41445793068908E2250D0
+        ).get_pool_from_lp_token(_lp);
+
+        if (pool == address(0)) {
+            pool = ICurveRegistry(0x90E00ACe148ca3b23Ac1bC8C240C2a7Dd9c2d7f5)
                 .get_pool_from_lp_token(_lp);
+        }
+        return pool;
     }
 
     // cubic root
