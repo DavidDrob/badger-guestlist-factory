@@ -12,4 +12,8 @@ interface ICurveTriCrypto {
         external
         view
         returns (address);
+
+    function balances(uint256 arg0) external view returns (uint256);
+
+    function totalSupply() external view returns (uint256);
 }

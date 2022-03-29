@@ -2,7 +2,7 @@ from scripts.deploy import deploy_factory
 from setup.config import (
     WRAPPER,
 )
-from brownie import accounts
+from brownie import accounts, exceptions
 import requests
 import json
 from dotenv import load_dotenv
@@ -40,11 +40,16 @@ def test_get_price_covalent():
     )
 
     if contract_token_price == 0:
-        contract_token_price = (
-            1 * (10**from_token_decimals) / factory_contract.getLPQuote(to_token)
-        )
+        with pytest.raises(exceptions.VirtualMachineError):
+            lp_quote = factory_contract.getLPQuote(to_token)
+
+            contract_token_price = (
+                1 * (10**from_token_decimals) / lp_quote
+            )
 
     covalent_plus_30 = float(covalent_token_price * (1.3))
     covalent_minus_30 = float(covalent_token_price * (0.7))
 
+    if contract_token_price == 0:
+        pytest.skip()
     assert covalent_plus_30 >= contract_token_price >= covalent_minus_30

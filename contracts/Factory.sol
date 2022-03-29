@@ -8,6 +8,7 @@ import "../interfaces/uniswap/IUniswapV2Router01.sol";
 import "../interfaces/curve/ICurveRegistry.sol";
 import "../interfaces/curve/ICurveStableSwap.sol";
 import "../interfaces/curve/ICurveTriCrypto.sol";
+import "../interfaces/curve/ICurvePool.sol";
 import "../interfaces/uniswap/IUniswapV2Pair.sol";
 import "../interfaces/uniswap/IUniswapV2Factory.sol";
 import "../interfaces/erc20/IERC20.sol";
@@ -64,36 +65,32 @@ contract Factory {
         return clone;
     }
 
-    function getCap(uint256 _capUsd, address _wrapper)
-        external
-        view
-        returns (uint256)
-    {
-        address want = address(this.getVaultTokenAddress(_wrapper));
-        uint256 cap;
+    function getCap(uint256 _capUsd, address _wrapper) external view returns (uint256){
+        address token = address(this.getVaultTokenAddress(_wrapper));
+        uint256 quote;
 
-        try this.getCurveTriCryptoLPQuote(want) returns (uint256 value) {
-            if (value > 0) {
-                cap = (_capUsd * (10**IERC20(STABLECOIN).decimals()) * (10**18))
-                    .div(value);
-                return cap;
+        try IUniswapV2Pair(token).factory(){
+            quote = this.getLPQuote(token);
+        }
+        catch (bytes memory) {
+            // Try curve (tri) lp quote
+            if (this.getCurvePoolFromLp(token) == address(0)) {
+                uint256 value = this.getAverageTokenPrice(token, STABLECOIN, 1);
+                if (value > 0) {
+                    quote = value;
+                }
+                quote = 0;
             }
-        } catch (bytes memory) {}
-
-        try this.getLPQuote(want) returns (uint256 value) {
-            if (value > 0) {
-                cap = (
-                    (_capUsd * (10**IERC20(STABLECOIN).decimals()) * (10**18))
-                ).div(this.getLPQuote(want));
+            else {
+                address pool = this.getCurvePoolFromLp(token);
+                quote = this.getCurveTriCryptoLPQuote(pool, token);
             }
-        } catch (bytes memory) {
-            cap = this.getAverageTokenPrice(STABLECOIN, want, _capUsd);
         }
 
-        if (cap == 0) {
-            cap = type(uint256).max;
+        if (quote == 0) {
+            return type(uint256).max;
         }
-        return cap;
+        return (_capUsd * (10**IERC20(STABLECOIN).decimals()) * (10**18)).div(quote);
     }
 
     function getVaultTokenAddress(address _vault)
@@ -219,6 +216,7 @@ contract Factory {
             path[1] = address(tokenOut);
             return SUSHI_ROUTER.getAmountsOut(amountIn, path)[1];
         } else {
+            // TODO: Optimise finding a router
             address[] memory path = new address[](3);
             path[0] = address(tokenIn);
             path[1] = address(0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2); // WETH
@@ -272,34 +270,80 @@ contract Factory {
         return lpPriceNaive;
     }
 
-    function getCurveTriCryptoLPQuote(address _lp)
+    function getCurveLPQuote(address _pool, address _lp) external view returns (uint256) {
+        try ICurveTriCrypto(_pool).coins(0) returns (address token0) {
+            address token1 = ICurveTriCrypto(_pool).coins(1);
+
+            uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
+            uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
+
+            uint256 r0 = ICurveTriCrypto(_pool).balances(0);
+            uint256 r1 = ICurveTriCrypto(_pool).balances(1);
+            uint256 totalSupply = IERC20(_lp).totalSupply();
+
+            uint256 lpPriceNaive = 2 * (((r0 * p0) + (r1 * p1)) / totalSupply);
+            // TODO: alpha finance way
+
+            return lpPriceNaive;
+        }
+        catch (bytes memory) {
+            ICurvePool poolContract = ICurvePool(_pool);
+
+            address token0 = poolContract.coins(0);
+            address token1 = poolContract.coins(1);
+
+            uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
+            uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
+
+            uint256 r0 = poolContract.balances(0);
+            uint256 r1 = poolContract.balances(1);
+            uint256 totalSupply = IERC20(_lp).totalSupply();
+
+            uint256 lpPriceNaive = 2 * (((r0 * p0) + (r1 * p1)) / totalSupply);
+            // TODO: alpha finance way
+
+            return lpPriceNaive;
+        }
+    }
+
+    function test(address _pool, address _lp) external view returns (uint256, uint256) {
+        ICurvePool poolContract = ICurvePool(_pool);
+
+        address token0 = poolContract.coins(0);
+        address token1 = poolContract.coins(1);
+        uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
+        uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
+        uint256 r0 = poolContract.balances(0);
+        uint256 r1 = poolContract.balances(0);
+        return (r0, r1);
+    }
+
+    function getCurveTriCryptoLPQuote(address _pool, address _token)
         external
         view
         returns (uint256)
     {
-        address pool = ICurveRegistry(
-            0x8F942C20D02bEfc377D41445793068908E2250D0
-        ).get_pool_from_lp_token(_lp);
+        ICurveTriCrypto poolContract = ICurveTriCrypto(_pool);
 
-        if (pool == address(0)) {
-            pool = CURVE_REGISTRY.get_pool_from_lp_token(_lp);
+        try ICurveTriCrypto(_pool).coins(2) {
+            address token0 = poolContract.coins(0);
+            address token1 = poolContract.coins(1);
+            address token2 = poolContract.coins(2);
+
+            uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
+            uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
+            uint256 p2 = this.getAverageTokenPrice(token2, STABLECOIN, 1);
+            uint256 v_lp = poolContract.get_virtual_price();
+
+            uint256 price = this.cubicRoot(p0 * p1 * p2);
+            uint256 finalPrice = (price * v_lp * 3) / (10**18); // TODO: replace decimals with tokens decimals
+
+            return finalPrice;
+        } catch (bytes memory) {
+            return this.getCurveLPQuote(_pool, _token);
         }
 
-        ICurveTriCrypto poolContract = ICurveTriCrypto(pool);
 
-        address token0 = poolContract.coins(0);
-        address token1 = poolContract.coins(1);
-        address token2 = poolContract.coins(2);
-
-        uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
-        uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
-        uint256 p2 = this.getAverageTokenPrice(token2, STABLECOIN, 1);
-        uint256 v_lp = poolContract.get_virtual_price();
-
-        uint256 price = this.cubicRoot(p0 * p1 * p2);
-        uint256 finalPrice = (price * v_lp * 3) / (10**18);
-
-        return finalPrice;
     }
 
     function getCurvePoolFromLp(address _lp) external view returns (address) {
