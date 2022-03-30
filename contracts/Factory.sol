@@ -75,9 +75,9 @@ contract Factory {
         catch (bytes memory) {
             // Try curve (tri) lp quote
             if (this.getCurvePoolFromLp(token) == address(0)) {
-                uint256 value = this.getAverageTokenPrice(token, STABLECOIN, 1);
+                uint256 value = this.getAverageTokenPrice(STABLECOIN, token, _capUsd);
                 if (value > 0) {
-                    quote = value;
+                    return value;
                 }
                 quote = 0;
             }
