@@ -77,15 +77,21 @@ contract Factory {
         uint256 userCap = this.getCap(_capUsd, _wrapper);
         uint256 totalCap = this.getCap(_totalCapUsd, _wrapper);
 
-        TestVipCappedGuestListBbtcUpgradeable(clone).initialize(_wrapper);
-        TestVipCappedGuestListBbtcUpgradeable(clone).setUserDepositCap(userCap);
-        TestVipCappedGuestListBbtcUpgradeable(clone).setTotalDepositCap(
-            totalCap
-        );
-        TestVipCappedGuestListBbtcUpgradeable(clone).setGuestRoot(_merkleRoot);
-        TestVipCappedGuestListBbtcUpgradeable(clone).transferOwnership(
+        TestVipCappedGuestListBbtcUpgradeable(clone).initialize(
+            _wrapper,
+            userCap,
+            totalCap,
+            _merkleRoot,
             _governance
         );
+        // TestVipCappedGuestListBbtcUpgradeable(clone).setUserDepositCap(userCap);
+        // TestVipCappedGuestListBbtcUpgradeable(clone).setTotalDepositCap(
+        //     totalCap
+        // );
+        // TestVipCappedGuestListBbtcUpgradeable(clone).setGuestRoot(_merkleRoot);
+        // TestVipCappedGuestListBbtcUpgradeable(clone).transferOwnership(
+        //     _governance
+        // );
         return clone;
     }
 

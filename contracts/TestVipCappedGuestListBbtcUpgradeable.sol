@@ -46,9 +46,19 @@ contract TestVipCappedGuestListBbtcUpgradeable is OwnableUpgradeable {
      * @dev Note that since this is just for testing, you're unable to change
      * `owner`.
      */
-    function initialize(address wrapper_) public initializer {
+    function initialize(
+        address wrapper_,
+        uint256 _userDepositCap,
+        uint256 _totalDepositCap,
+        bytes32 _guestRoot,
+        address _gov
+    ) public initializer {
         __Ownable_init();
         wrapper = wrapper_;
+        userDepositCap = _userDepositCap;
+        totalDepositCap = _totalDepositCap;
+        guestRoot = _guestRoot;
+        // this.transferOwnership(_gov);
     }
 
     /**
