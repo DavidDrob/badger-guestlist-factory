@@ -1,9 +1,8 @@
-from brownie import accounts
 from scripts.deploy import deploy_factory
 from brownie.network.state import Chain
 
 
-def test_get_correct_lp_price_tricrypto():
+def test_get_correct_lp_price_tricrypto(factory):
     # TODO: Bind to etherscan API
     lp_expected_prices = {
         1: [
@@ -18,9 +17,8 @@ def test_get_correct_lp_price_tricrypto():
         ],  # https://polygonscan.com/address/0xD094fCF9D65341770A2458F38b9010c39C813642#readContract
     }
     chain_id = Chain().id
-    dev = accounts[0]
+    factory_contract = factory
 
-    factory_contract = deploy_factory(dev)
     lp = factory_contract.getCurveTriCryptoLPQuote(
         lp_expected_prices[chain_id][1], lp_expected_prices[chain_id][2]
     )

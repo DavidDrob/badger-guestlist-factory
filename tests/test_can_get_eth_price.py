@@ -1,10 +1,7 @@
-from brownie import accounts
-from scripts.deploy import deploy_factory
 from brownie.network.state import Chain
 
 
-def test_can_get_eth_price():
-    dev = accounts[0]
+def test_can_get_eth_price(factory):
     chain_id = Chain().id
     addresses = {
         1: [
@@ -17,7 +14,7 @@ def test_can_get_eth_price():
         ],
     }
 
-    factory_contract = deploy_factory(dev)
+    factory_contract = factory
 
     assert factory_contract.getLPQuote(addresses[chain_id][0]) > 0
     assert (

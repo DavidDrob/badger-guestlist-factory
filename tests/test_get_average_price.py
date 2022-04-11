@@ -2,7 +2,7 @@ from scripts.deploy import deploy_factory
 from setup.config import (
     WRAPPER,
 )
-from brownie import accounts, exceptions
+from brownie import exceptions
 import requests
 import json
 from dotenv import load_dotenv
@@ -16,10 +16,9 @@ MAX_NUM = 1157920892373161954235709850086879078532699846656405640394575840079131
 # Checks 1USD worth of `want` with 20% margin
 # Add your `COVALENT_API_KEY` to .env otherwise test will fail
 # https://www.covalenthq.com/platform/#/auth/register/
-def test_get_price_covalent():
+def test_get_price_covalent(factory):
     api_key = os.getenv("COVALENT_API_KEY")
-    dev = accounts[0]
-    factory_contract = deploy_factory(dev)
+    factory_contract = factory
     to_token = factory_contract.getVaultTokenAddress(WRAPPER)
 
     response = requests.get(
@@ -43,9 +42,7 @@ def test_get_price_covalent():
         with pytest.raises(exceptions.VirtualMachineError):
             lp_quote = factory_contract.getLPQuote(to_token)
 
-            contract_token_price = (
-                1 * (10**from_token_decimals) / lp_quote
-            )
+            contract_token_price = 1 * (10**from_token_decimals) / lp_quote
 
     covalent_plus_30 = float(covalent_token_price * (1.3))
     covalent_minus_30 = float(covalent_token_price * (0.7))

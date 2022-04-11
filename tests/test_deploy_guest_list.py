@@ -1,5 +1,3 @@
-from brownie import accounts
-from scripts.deploy import deploy_factory, deploy_guest_list
 from scripts.get_token_price_covalent import get_token_price_covalent
 from setup.config import WRAPPER, USER_DEPOSIT_CAP, TOTAL_DEPOSIT_CAP
 import pytest
@@ -7,12 +5,9 @@ import pytest
 MAX_NUM = 115792089237316195423570985008687907853269984665640564039457584007913129639935
 
 
-def test_can_create_new_guest_list():
+def test_can_create_new_guest_list(guestlist):
     expected_wrapper = WRAPPER
-    dev = accounts[0]
-
-    factory_contract = deploy_factory(dev)
-    guest_list_contract = deploy_guest_list(factory_contract, dev)
+    guest_list_contract = guestlist
 
     assert guest_list_contract  # Gueslist was deployed
     assert (
@@ -20,20 +15,16 @@ def test_can_create_new_guest_list():
     )  # Wrapper was set correctly
 
 
-def test_dev_is_owner():
-    dev = accounts[0]
+def test_dev_is_owner(guestlist, deployer):
+    guest_list_contract = guestlist
 
-    factory_contract = deploy_factory(dev)
-    guest_list_contract = deploy_guest_list(factory_contract, dev)
-
-    assert dev.address == guest_list_contract.owner()
+    assert deployer.address == guest_list_contract.owner()
 
 
-def test_deposit_caps_are_correct():
-    dev = accounts[0]
+def test_deposit_caps_are_correct(factory, guestlist):
 
-    factory_contract = deploy_factory(dev)
-    guest_list_contract = deploy_guest_list(factory_contract, dev)
+    factory_contract = factory
+    guest_list_contract = guestlist
 
     token = factory_contract.getVaultTokenAddress(WRAPPER)
     covalent_token_price, covalent_token_decimals = get_token_price_covalent(token)

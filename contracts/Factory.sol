@@ -21,42 +21,42 @@ contract Factory {
     // 0x6B175474E89094C44Da98b954EedeAC495271d0F Ethereum Main Net
     // 0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063 Polygon
     address public constant STABLECOIN =
-        0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063;
+        0x6B175474E89094C44Da98b954EedeAC495271d0F;
     uint8 public constant STABLECOIN_DECIMALS = 18;
 
     // 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2 Ethereum Main Net
     // 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270 Polygon
-    address public constant WETH = 0x0d500B1d8E8eF31E21C99d1Db9A6444d3ADf1270;
+    address public constant WETH = 0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2;
 
     // 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f Ethereum Main Net
     // 0xc35DADB65012eC5796536bD9864eD8773aBc74C4 Polygon
     address public constant UNI_FACTORY =
-        0xc35DADB65012eC5796536bD9864eD8773aBc74C4;
+        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
     // 0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f Ethereum Main Net
     // 0xc35DADB65012eC5796536bD9864eD8773aBc74C4 Polygon
     address public constant SUSHI_FACTORY =
-        0xc35DADB65012eC5796536bD9864eD8773aBc74C4;
+        0x5C69bEe701ef814a2B6a3EDD4B1652CB9cc5aA6f;
 
     // 0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D Ethereum Main Net
     // 0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff Polygon
     IUniswapV2Router01 public constant UNI_ROUTER =
-        IUniswapV2Router01(0xa5E0829CaCEd8fFDD4De3c43696c57F7D7A678ff);
+        IUniswapV2Router01(0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D);
 
     // 0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F Ethereum Main Net
     // 0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506 Polygon
     IUniswapV2Router01 public constant SUSHI_ROUTER =
-        IUniswapV2Router01(0x1b02dA8Cb0d097eB8D57A175b88c7D8b47997506);
+        IUniswapV2Router01(0xd9e1cE17f2641f24aE83637ab66a2cca9C378B9F);
 
     // 0x8F942C20D02bEfc377D41445793068908E2250D0 Ethereum Main Net
     // 0x094d12e5b541784701FD8d65F11fc0598FBC6332 Polygon
     ICurveRegistry public constant CURVE_REGISTRY =
-        ICurveRegistry(0x094d12e5b541784701FD8d65F11fc0598FBC6332);
+        ICurveRegistry(0x8F942C20D02bEfc377D41445793068908E2250D0);
 
     // 0x90E00ACe148ca3b23Ac1bC8C240C2a7Dd9c2d7f5 Ethereum Main Net
     // 0x47bB542B9dE58b970bA50c9dae444DDB4c16751a Polygon
     address public constant CURVE_REGISTRY_TWO =
-        0x47bB542B9dE58b970bA50c9dae444DDB4c16751a;
+        0x90E00ACe148ca3b23Ac1bC8C240C2a7Dd9c2d7f5;
 
     constructor() public {
         guestlistImplementation = address(
@@ -84,14 +84,9 @@ contract Factory {
             _merkleRoot,
             _governance
         );
-        // TestVipCappedGuestListBbtcUpgradeable(clone).setUserDepositCap(userCap);
-        // TestVipCappedGuestListBbtcUpgradeable(clone).setTotalDepositCap(
-        //     totalCap
-        // );
-        // TestVipCappedGuestListBbtcUpgradeable(clone).setGuestRoot(_merkleRoot);
-        // TestVipCappedGuestListBbtcUpgradeable(clone).transferOwnership(
-        //     _governance
-        // );
+        TestVipCappedGuestListBbtcUpgradeable(clone).transferOwnership(
+            _governance
+        );
         return clone;
     }
 
@@ -292,38 +287,21 @@ contract Factory {
         view
         returns (uint256)
     {
-        try ICurveTriCrypto(_pool).coins(0) returns (address token0) {
-            address token1 = ICurveTriCrypto(_pool).coins(1);
+        try ICurvePool(_pool).coins(0) returns (address token0) {
+            address token1 = ICurvePool(_pool).coins(1);
 
             uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
             uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
 
-            uint256 r0 = ICurveTriCrypto(_pool).balances(0);
-            uint256 r1 = ICurveTriCrypto(_pool).balances(1);
+            uint256 r0 = ICurvePool(_pool).balances(0);
+            uint256 r1 = ICurvePool(_pool).balances(1);
             uint256 totalSupply = IERC20(_lp).totalSupply();
 
             uint256 lpPriceNaive = 2 * (((r0 * p0) + (r1 * p1)) / totalSupply);
             // TODO: alpha finance way
 
             return lpPriceNaive;
-        } catch (bytes memory) {
-            ICurvePool poolContract = ICurvePool(_pool);
-
-            address token0 = poolContract.coins(0);
-            address token1 = poolContract.coins(1);
-
-            uint256 p0 = this.getAverageTokenPrice(token0, STABLECOIN, 1);
-            uint256 p1 = this.getAverageTokenPrice(token1, STABLECOIN, 1);
-
-            uint256 r0 = poolContract.balances(0);
-            uint256 r1 = poolContract.balances(1);
-            uint256 totalSupply = IERC20(_lp).totalSupply();
-
-            uint256 lpPriceNaive = 2 * (((r0 * p0) + (r1 * p1)) / totalSupply);
-            // TODO: alpha finance way
-
-            return lpPriceNaive;
-        }
+        } catch (bytes memory) {}
     }
 
     function getCurveTriCryptoLPQuote(address _pool, address _token)
@@ -361,7 +339,7 @@ contract Factory {
                 _lp
             );
         }
-        return pool;
+        return _lp;
     }
 
     // cubic root
